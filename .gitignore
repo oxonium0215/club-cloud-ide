@@ -21,6 +21,10 @@ packages/*.deb
 *.log
 /tmp/
 
+# Go ビルド成果物
+portal/portal
+portal/portal-bin
+
 # Terraform ローカルファイル
 templates/*/.terraform/
 templates/*/.terraform.lock.hcl
