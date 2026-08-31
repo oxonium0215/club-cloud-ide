@@ -362,6 +362,8 @@ func (p *PortalServer) handleProxy(w http.ResponseWriter, r *http.Request) {
 			req.URL.RawQuery = r.URL.RawQuery
 		}
 		req.Host = target.Host
+		// サブパス認識用 (code-server / KasmVNC が生成するURLにプレフィックスを含める)
+		req.Header.Set("X-Forwarded-Prefix", "/proxy/"+app)
 	}
 	proxy.ServeHTTP(w, r)
 }
