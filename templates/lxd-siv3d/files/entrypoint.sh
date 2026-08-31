@@ -16,7 +16,8 @@ chown coder:coder /run/user/1000
 chmod 0700 /run/user/1000
 
 # 1. code-server (ポート 13337) 起動
-sudo -u coder code-server --auth none --port 13337 /home/coder/workspace &
+#    --base-path: ポータルのリバースプロキシ (/proxy/vscode) 経由で正しく動くようにする
+sudo -u coder code-server --auth none --port 13337 --base-path /proxy/vscode /home/coder/workspace &
 
 # 2. KasmVNC サーバー (ポート 6080) 起動
 #    -disableBasicAuth: KasmVNC WebUI の HTTP Basic 認証を無効化 (KasmVNC issue #259)
