@@ -20,6 +20,7 @@ sudo -u coder code-server --auth none --port 13337 /home/coder/workspace &
 
 # 2. KasmVNC サーバー (ポート 6080) 起動
 #    -disableBasicAuth: KasmVNC WebUI の HTTP Basic 認証を無効化 (KasmVNC issue #259)
-sudo -u coder vncserver :1 -geometry 1280x800 -depth 24 -websocketPort 6080 -sslOnly 0 -interface 127.0.0.1 -SecurityTypes None -videoCodec disabled -disableBasicAuth -fg
+#    -interface 0.0.0.0: ポータルのリバースプロキシがコンテナIP経由でアクセスするため
+sudo -u coder vncserver :1 -geometry 1280x800 -depth 24 -websocketPort 6080 -sslOnly 0 -interface 0.0.0.0 -SecurityTypes None -videoCodec disabled -disableBasicAuth -fg
 
 wait -n
