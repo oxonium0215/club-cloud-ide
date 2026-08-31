@@ -42,8 +42,8 @@ open http://localhost:7080
 本番PC (PC1/PC2) では pull 型 GitOps により自動同期される。
 
 ```bash
-git clone <repo-url> && cd club-cloud-ide
-sudo GITHUB_URL=<repo-url> ./deploy/install.sh
+git clone https://github.com/oxonium0215/club-cloud-ide.git && cd club-cloud-ide
+sudo GITHUB_URL=https://github.com/oxonium0215/club-cloud-ide.git ./deploy/install.sh
 ```
 
 詳しくは [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) を参照。

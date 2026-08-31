@@ -16,9 +16,9 @@
 sudo mkdir -p /etc/coder
 sudo install -m 0600 /dev/null /etc/coder/env   # 秘密情報 (後述)
 
-git clone <repo-url> /opt/club-cloud-ide
+git clone https://github.com/oxonium0215/club-cloud-ide.git /opt/club-cloud-ide
 cd /opt/club-cloud-ide
-sudo GITHUB_URL=<repo-url> ./deploy/install.sh
+sudo GITHUB_URL=https://github.com/oxonium0215/club-cloud-ide.git ./deploy/install.sh
 ```
 
 `install.sh` が行うこと:

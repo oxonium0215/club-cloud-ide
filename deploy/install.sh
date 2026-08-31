@@ -5,7 +5,7 @@
 set -euo pipefail
 
 REPO_DIR="/opt/club-cloud-ide"
-GITHUB_URL="${GITHUB_URL:?GITHUB_URL を設定してください (例: https://github.com/yourorg/club-cloud-ide.git)}"
+GITHUB_URL="${GITHUB_URL:?GITHUB_URL を設定してください (例: https://github.com/oxonium0215/club-cloud-ide.git)}"
 CODER_TEMPLATE_NAME="lxd-kde-siv3d"
 
 # 1. リポジトリ配置 (GitOps の同期元)
