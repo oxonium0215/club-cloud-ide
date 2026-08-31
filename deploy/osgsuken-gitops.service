@@ -1,0 +1,8 @@
+[Unit]
+Description=Club Cloud IDE GitOps Sync
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/osgsuken-gitops-sync.sh

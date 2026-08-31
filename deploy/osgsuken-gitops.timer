@@ -1,0 +1,10 @@
+[Unit]
+Description=Club Cloud IDE GitOps Sync Timer
+
+[Timer]
+OnBootSec=1min
+OnUnitActiveSec=2min
+Unit=osgsuken-gitops.service
+
+[Install]
+WantedBy=timers.target

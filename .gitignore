@@ -1,0 +1,26 @@
+# Node.js
+node_modules/
+
+# ビルド成果物
+sample-game/dist_web/
+sample-game/dist_windows/
+
+# 秘密情報・鍵
+scripts/ssh_host_rsa_key
+scripts/ssh_host_rsa_key.pub
+*.pem
+
+# オフラインdebキャッシュ (apt化に伴い廃止)
+packages/*.deb
+
+# ローカルIDE設定
+.claude/
+.commandcode/
+
+# ログ・一時ファイル
+*.log
+/tmp/
+
+# Terraform ローカルファイル
+templates/*/.terraform/
+templates/*/.terraform.lock.hcl

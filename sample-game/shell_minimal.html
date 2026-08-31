@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Siv3D Game - 数学研究部 クラウド開発環境</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        .header {
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            color: #38bdf8;
+        }
+        .header p {
+            margin: 4px 0 0 0;
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        .canvas-container {
+            position: relative;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #000;
+        }
+        canvas {
+            display: block;
+            touch-action: none;
+            max-width: 95vw;
+            max-height: 80vh;
+            aspect-ratio: 4 / 3;
+        }
+        .controls-hint {
+            margin-top: 10px;
+            font-size: 0.8rem;
+            color: #64748b;
+            display: flex;
+            gap: 16px;
+        }
+        .badge {
+            background: #1e293b;
+            border: 1px solid #334155;
+            padding: 2px 8px;
+            border-radius: 4px;
+            color: #cbd5e1;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>数学研究部 Siv3D WebAssembly 実行環境</h1>
+        <p>iPad Safari / Chrome 最適化 (クライアントサイド描画)</p>
+    </div>
+
+    <div class="canvas-container">
+        <canvas id="canvas" width="800" height="600"></canvas>
+    </div>
+
+    <div class="controls-hint">
+        <span>🎮 <span class="badge">タッチ / ドラッグ</span> または <span class="badge">A / D / 矢印キー</span>: 自機移動</span>
+        <span>⚡ <span class="badge">タップ / クリック</span>: スタート</span>
+    </div>
+
+    <script>
+        var Module = {
+            canvas: (function() {
+                var canvas = document.getElementById('canvas');
+                return canvas;
+            })(),
+            onRuntimeInitialized: function() {
+                console.log("Siv3D WebAssembly Game initialized successfully.");
+                setupInputHandlers();
+            }
+        };
+
+        function setupInputHandlers() {
+            var canvas = document.getElementById('canvas');
+
+            function getCanvasPos(e) {
+                var rect = canvas.getBoundingClientRect();
+                var scaleX = canvas.width / rect.width;
+                var scaleY = canvas.height / rect.height;
+                var clientX = e.clientX;
+                var clientY = e.clientY;
+                if (e.touches && e.touches.length > 0) {
+                    clientX = e.touches[0].clientX;
+                    clientY = e.touches[0].clientY;
+                }
+                return {
+                    x: (clientX - rect.left) * scaleX,
+                    y: (clientY - rect.top) * scaleY
+                };
+            }
+
+            // マウスイベント
+            canvas.addEventListener('mousemove', function(e) {
+                var p = getCanvasPos(e);
+                if (Module._em_on_mouse_move) Module._em_on_mouse_move(p.x, p.y);
+            });
+            canvas.addEventListener('mousedown', function(e) {
+                var p = getCanvasPos(e);
+                if (Module._em_on_mouse_down) Module._em_on_mouse_down(p.x, p.y);
+            });
+            window.addEventListener('mouseup', function(e) {
+                if (Module._em_on_mouse_up) Module._em_on_mouse_up();
+            });
+
+            // タッチイベント (iPad Safari)
+            canvas.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                var p = getCanvasPos(e);
+                if (Module._em_on_mouse_down) Module._em_on_mouse_down(p.x, p.y);
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', function(e) {
+                e.preventDefault();
+                var p = getCanvasPos(e);
+                if (Module._em_on_mouse_move) Module._em_on_mouse_move(p.x, p.y);
+            }, { passive: false });
+
+            canvas.addEventListener('touchend', function(e) {
+                e.preventDefault();
+                if (Module._em_on_mouse_up) Module._em_on_mouse_up();
+            }, { passive: false });
+
+            // キーボード
+            window.addEventListener('keydown', function(e) {
+                if (Module._em_on_key_down) Module._em_on_key_down(e.keyCode);
+            });
+            window.addEventListener('keyup', function(e) {
+                if (Module._em_on_key_up) Module._em_on_key_up(e.keyCode);
+            });
+        }
+    </script>
+    {{{ SCRIPT }}}
+</body>
+</html>

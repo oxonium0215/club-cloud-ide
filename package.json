@@ -1,0 +1,12 @@
+{
+  "name": "club-cloud-ide",
+  "version": "2.0.0",
+  "description": "数学研究部 クラウド開発環境 (Coder × LXD × KDE Plasma / KasmVNC)",
+  "private": true,
+  "scripts": {
+    "start": "./scripts/start.sh",
+    "cleanup": "./scripts/cleanup.sh",
+    "build-image": "./scripts/setup-base-image.sh",
+    "portal": "node scripts/portal.js"
+  }
+}

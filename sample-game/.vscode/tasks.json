@@ -1,0 +1,61 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "1. ⚡ [爆速開発用] WebAssembly ビルド (O0・1秒以内)",
+            "type": "shell",
+            "command": "mkdir -p dist_web && em++ -std=c++17 -O0 src/Main.cpp -o dist_web/game.html --shell-file shell_minimal.html -s EXPORTED_FUNCTIONS='[\"_main\",\"_em_on_mouse_move\",\"_em_on_mouse_down\",\"_em_on_mouse_up\",\"_em_on_key_down\",\"_em_on_key_up\"]' -s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\"]' -s ALLOW_MEMORY_GROWTH=1 && echo '⚡ 高速ビルド完了! (dist_web/game.html)'",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "2. 🚀 [本番用] WebAssembly 最適化ビルド (O2)",
+            "type": "shell",
+            "command": "mkdir -p dist_web && em++ -std=c++17 -O2 src/Main.cpp -o dist_web/game.html --shell-file shell_minimal.html -s EXPORTED_FUNCTIONS='[\"_main\",\"_em_on_mouse_move\",\"_em_on_mouse_down\",\"_em_on_mouse_up\",\"_em_on_key_down\",\"_em_on_key_up\"]' -s EXPORTED_RUNTIME_METHODS='[\"ccall\",\"cwrap\"]' -s ALLOW_MEMORY_GROWTH=1 && echo '🚀 本番最適化ビルド完了!'",
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "3. 🌐 [プレビュー] Webサーバー起動 (ポート8080)",
+            "type": "shell",
+            "command": "python3 -m http.server 8080 --directory dist_web",
+            "isBackground": true,
+            "problemMatcher": {
+                "pattern": {
+                    "regexp": "^.*$"
+                },
+                "background": {
+                    "activeOnStart": true,
+                    "beginsPattern": "^Serving HTTP.*",
+                    "endsPattern": "^Serving HTTP.*"
+                }
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "4. 🪟 [学祭展示用] Windows .exe 静的リンク出力",
+            "type": "shell",
+            "command": "mkdir -p dist_windows && x86_64-w64-mingw32-g++ -std=c++17 -O2 -static -static-libgcc -static-libstdc++ src/Main.cpp -o dist_windows/Siv3D_Game_Windows.exe -lgdi32 -luser32 -mwindows && echo '✅ Windows exe 出力完了: dist_windows/Siv3D_Game_Windows.exe'",
+            "group": "build",
+            "problemMatcher": ["$gcc"],
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        }
+    ]
+}

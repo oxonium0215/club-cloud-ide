@@ -1,0 +1,53 @@
+#!/bin/sh
+# KasmVNC デスクトップ起動スクリプト
+# KDE Plasma セッションを起動し、クラッシュ時は自動再起動する。
+# Xvnc のプロセスは xstartup が生きている限り維持される。
+export DESKTOP_SESSION=plasma
+export XDG_CURRENT_DESKTOP=KDE
+export XDG_SESSION_DESKTOP=KDE
+export XDG_SESSION_TYPE=x11
+export QT_QPA_PLATFORM=xcb
+export QT_X11_NO_MITSHM=1
+export KDE_FULL_SESSION=true
+export LANG=ja_JP.UTF-8
+export LC_ALL=ja_JP.UTF-8
+export GTK_IM_MODULE=fcitx
+export QT_IM_MODULE=fcitx
+export XMODIFIERS=@im=fcitx
+
+# KDE Plasma は XDG_RUNTIME_DIR (/run/user/1000) を必須とする。
+# 未設定だとタスクバーやアプリ起動 (klauncher) が失敗してセッションが落ちる。
+if [ -z "$XDG_RUNTIME_DIR" ] || [ ! -d "$XDG_RUNTIME_DIR" ]; then
+    export XDG_RUNTIME_DIR=/run/user/$(id -u)
+    mkdir -p "$XDG_RUNTIME_DIR"
+    chmod 0700 "$XDG_RUNTIME_DIR"
+fi
+
+# D-Bus & systemd ユーザー環境の同期
+systemctl --user import-environment DISPLAY XAUTHORITY XDG_CURRENT_DESKTOP XDG_SESSION_DESKTOP XDG_SESSION_TYPE QT_QPA_PLATFORM GTK_IM_MODULE QT_IM_MODULE XMODIFIERS XDG_RUNTIME_DIR 2>/dev/null || true
+dbus-update-activation-environment --systemd --all 2>/dev/null || true
+
+# kactivitymanagerd を先行起動して plasmashell の初期化失敗を防止
+/usr/lib/x86_64-linux-gnu/libexec/kactivitymanagerd &
+plasma_waitforname org.kde.ActivityManager 2>/dev/null || sleep 1
+
+# 日本語入力 (Fcitx5) 起動
+fcitx5 -d 2>/dev/null || true
+
+# 仮想オーディオ (PulseAudio)
+pulseaudio --start --exit-idle-time=-1 2>/dev/null || true
+
+# KDE Plasma 公式起動コマンド (startplasma-x11)
+startplasma-x11 &
+
+# セッション監視ループ:
+# exec startplasma-x11 にすると、KDEセッションが一度でも落ちると
+# Xvnc ごと終了して VNC 接続が切れてしまう。
+# セッションを再起動し続けることで、タスクバーからのアプリ起動に
+# 失敗してもデスクトップ自体は生き続けるようにする。
+while true; do
+    wait
+    echo "[xstartup] KDE Plasma セッションが終了しました。3秒後に再起動します..."
+    sleep 3
+    startplasma-x11 &
+done
