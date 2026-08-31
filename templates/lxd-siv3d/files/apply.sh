@@ -34,8 +34,10 @@ install -m 0644 "${CONFIG_DIR}/konsolerc"        /home/coder/.config/konsolerc
 install -m 0644 "${CONFIG_DIR}/profile1.profile" "/home/coder/.local/share/konsole/Profile 1.profile"
 
 # code-server が未導入ならインストール (バージョンはリポジトリ側で追跡)
+# ※ インストールスクリプトは $HOME を参照するため、明示的に設定する
 if ! command -v code-server >/dev/null 2>&1; then
     echo "[apply] code-server をインストール中..."
+    export HOME=/root
     curl -fsSL https://code-server.dev/install.sh | sh
 fi
 

@@ -19,7 +19,7 @@ variable "step" {
 variable "repo_url" {
   description = "設定配布元の Git リポジトリ URL (GitOps)"
   type        = string
-  default     = "https://github.com/yourorg/club-cloud-ide.git"
+  default     = "https://github.com/oxonium0215/club-cloud-ide.git"
 }
 
 variable "repo_ref" {
