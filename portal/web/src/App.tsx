@@ -58,9 +58,16 @@ function App() {
     const hb = setInterval(() => {
       fetch("/api/heartbeat", { credentials: "same-origin", method: "POST" }).catch(() => {});
     }, HEARTBEAT_MS);
+
+    // ブラウザの戻るボタンでアプリ (noVNC / VS Code) から戻ったとき、
+    // bfcache 復元で loading 状態が残るのを防ぐ
+    const clearLoading = () => setLoading(null);
+    window.addEventListener("pageshow", clearLoading);
+
     return () => {
       clearInterval(id);
       clearInterval(hb);
+      window.removeEventListener("pageshow", clearLoading);
     };
   }, []);
 
