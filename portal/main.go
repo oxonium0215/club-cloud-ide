@@ -320,12 +320,13 @@ func (p *PortalServer) handleAPILaunch(w http.ResponseWriter, r *http.Request) {
 	// デスクトップ (noVNC) は接続先をクエリで指定する。
 	// host はポートを含めない (noVNC が自動でポートを付与するため 2重になる)。
 	// port を明示して、ws://<host>:<port>/... を生成させる。
+	// resize=remote: ブラウザのウィンドウサイズに合わせて VNC 解像度をリモート変更
 	if app == "desktop" {
 		host := r.Host
 		if h, _, err := net.SplitHostPort(r.Host); err == nil {
 			host = h
 		}
-		proxyURL += "/vnc.html?autoconnect=1&host=" + host + "&port=7080&path=/proxy/desktop/" + ip + "/websockify"
+		proxyURL += "/vnc.html?autoconnect=1&host=" + host + "&port=7080&resize=remote&path=/proxy/desktop/" + ip + "/websockify"
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
 		"proxy_url": proxyURL,
