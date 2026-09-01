@@ -1,0 +1,13 @@
+[Unit]
+Description=Club Cloud IDE Workspace (code-server + TigerVNC + noVNC)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/entrypoint.sh
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

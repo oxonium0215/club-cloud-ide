@@ -165,6 +165,6 @@ packages: []
 runcmd:
   - [sh, -c, "if [ ! -d /home/osgsuken/.config/club-cloud-ide/.git ]; then git clone --depth 1 --branch main REPO_URL_PLACEHOLDER /home/osgsuken/.config/club-cloud-ide; else git -C /home/osgsuken/.config/club-cloud-ide pull --ff-only; fi"]
   - [sh, -c, "chown -R osgsuken:osgsuken /home/osgsuken/.config/club-cloud-ide"]
+  # apply.sh が設定配布と systemd サービス (workspace) の起動まで行う
   - [bash, /home/osgsuken/.config/club-cloud-ide/templates/lxd-siv3d/files/apply.sh]
-  - [sh, -c, "setsid nohup /usr/local/bin/entrypoint.sh > /var/log/entrypoint.log 2>&1 < /dev/null &"]
 `

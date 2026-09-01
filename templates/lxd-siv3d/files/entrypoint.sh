@@ -28,9 +28,9 @@ sudo -u osgsuken vncserver :1 -geometry 1280x800 -depth 24 -SecurityTypes VncAut
 
 # 3. noVNC (websockify) をポート 6080 で起動
 #    --web: noVNC の静的ファイル (vnc.html 等) を配信
-#    --listen 6080: プロキシがコンテナIP経由でアクセスするため 0.0.0.0 で待受
+#    6080: 待受ポート (プロキシがコンテナIP経由でアクセスするため 0.0.0.0)
 #    localhost:5901: TigerVNC へのブリッジ
-websockify --web /usr/share/novnc --listen 6080 --heartbeat 30 localhost:5901 &
+websockify --web=/usr/share/novnc 6080 localhost:5901 &
 
 # 全プロセスの終了を待つ
 wait
