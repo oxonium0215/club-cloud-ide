@@ -16,9 +16,10 @@ chown osgsuken:osgsuken /run/user/1000
 chmod 0700 /run/user/1000
 
 # 1. code-server (ポート 13337) 起動
-#    サブパス (X-Forwarded-Prefix) はポータルのリバースプロキシが付与する
+#    サブパス認識はポータルのリバースプロキシが付与する
+#    X-Forwarded-Prefix: /proxy/vscode ヘッダーによる (code-server 4.x の仕組み)。
 #    --bind-addr 0.0.0.0: プロキシがコンテナIP経由でアクセスするため
-sudo -u osgsuken code-server --auth none --bind-addr 0.0.0.0:13337 /home/osgsuken/workspace &
+sudo -u osgsuken code-server /home/osgsuken/workspace &
 
 # 2. KasmVNC サーバー (ポート 6080) 起動
 #    -disableBasicAuth: KasmVNC WebUI の HTTP Basic 認証を無効化 (KasmVNC issue #259)

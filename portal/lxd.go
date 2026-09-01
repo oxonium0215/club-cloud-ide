@@ -138,20 +138,28 @@ func (c *ContainerManager) Exec(username string, args []string) (string, error) 
 }
 
 // ContainerIP はコンテナの IPv4 アドレスを返す (プロキシ用)。
+// DHCP で IP が割り当てられるまで短い間隔でリトライする。
 func (c *ContainerManager) ContainerIP(username string) (string, error) {
 	name := c.ContainerName(username)
-	state, _, err := c.server.GetInstanceState(name)
-	if err != nil {
-		return "", fmt.Errorf("get instance state: %w", err)
-	}
-	for _, n := range state.Network {
-		for _, addr := range n.Addresses {
-			if addr.Family == "inet" && addr.Address != "127.0.0.1" {
-				return addr.Address, nil
+	var lastErr error
+	for i := 0; i < 30; i++ {
+		state, _, err := c.server.GetInstanceState(name)
+		if err != nil {
+			lastErr = fmt.Errorf("get instance state: %w", err)
+			time.Sleep(2 * time.Second)
+			continue
+		}
+		for _, n := range state.Network {
+			for _, addr := range n.Addresses {
+				if addr.Family == "inet" && addr.Address != "127.0.0.1" {
+					return addr.Address, nil
+				}
 			}
 		}
+		lastErr = fmt.Errorf("no IPv4 address for %s", name)
+		time.Sleep(2 * time.Second)
 	}
-	return "", fmt.Errorf("no IPv4 address for %s", name)
+	return "", lastErr
 }
 
 // WaitRunning はコンテナが起動するまで待つ (タイムアウト付き)。
