@@ -16,8 +16,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/http/httputil"
-	"net/url"
 	"os"
 	"strings"
 	"sync"
@@ -137,8 +135,8 @@ func (p *PortalServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/me", p.handleAPIme)
 	mux.HandleFunc("/api/launch", p.handleAPILaunch)
 	mux.HandleFunc("/api/heartbeat", p.handleAPIHeartbeat)
-	// プロキシ (認証必須)
-	mux.HandleFunc("/proxy/", p.handleProxy)
+	// Caddy forward_auth 用: セッション検証エンドポイント
+	mux.HandleFunc("/auth/check", p.handleAuthCheck)
 }
 
 // handleRoot はポータル画面を返す。
@@ -288,9 +286,21 @@ func (p *PortalServer) handleAPILaunch(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// 起動待ち (内部サービス readiness はプロキシ側でハンドル)
+	// コンテナの IP を取得し、Caddy の転送先を含む URL を返す。
+	// Caddy が /proxy/<app>/<ip>/* を <ip>:<port> に転送する。
+	ip, err := p.lxd.ContainerIP(session.Username)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		return
+	}
+	proxyURL := "/proxy/" + app + "/" + ip
+	// VS Code は / アクセス時に ./?folder=... へ相対リダイレクトして 404 になりがち。
+	// ?folder= を最初から指定するとワークスペースが直接開く。
+	if app == "vscode" {
+		proxyURL += "/?folder=/home/osgsuken/workspace"
+	}
 	writeJSON(w, http.StatusOK, map[string]string{
-		"proxy_url": "/proxy/" + app,
+		"proxy_url": proxyURL,
 	})
 }
 
@@ -305,67 +315,17 @@ func (p *PortalServer) handleAPIHeartbeat(w http.ResponseWriter, r *http.Request
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 }
 
-// handleProxy はコンテナ内サービス (VS Code / KasmVNC) へのリバースプロキシ。
-func (p *PortalServer) handleProxy(w http.ResponseWriter, r *http.Request) {
+// handleAuthCheck は Caddy の forward_auth 用セッション検証エンドポイント。
+// セッションが有効なら 200 (Caddy が転送を続行)、無効なら 401 を返す。
+// さらにプロキシ先のコンテナ IP をヘッダーで Caddy に伝える。
+func (p *PortalServer) handleAuthCheck(w http.ResponseWriter, r *http.Request) {
 	session := p.sessionFromRequest(r)
 	if session == nil {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "not_authenticated"})
 		return
 	}
-
-	// /proxy/vscode → コンテナの :13337
-	// /proxy/desktop → コンテナの :6080
-	parts := strings.SplitN(strings.TrimPrefix(r.URL.Path, "/proxy/"), "/", 2)
-	if len(parts) == 0 {
-		http.NotFound(w, r)
-		return
-	}
-	app := parts[0]
-	rest := ""
-	if len(parts) > 1 {
-		rest = "/" + parts[1]
-	}
-
-	var port string
-	switch app {
-	case "vscode":
-		port = "13337"
-	case "desktop":
-		port = "6080"
-	default:
-		http.NotFound(w, r)
-		return
-	}
-
-	// コンテナが起動しているか確認
-	status, err := p.lxd.Status(session.Username)
-	if err != nil || status != StatusRunning {
-		// 起動中画面を返す (JS が再試行する)
-		writeJSON(w, http.StatusServiceUnavailable, map[string]string{"error": "container_not_ready"})
-		return
-	}
-
-	// LXD コンテナの IP を解決してプロキシ
-	ip, err := p.lxd.ContainerIP(session.Username)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
-		return
-	}
-
-	target := &url.URL{Scheme: "http", Host: ip + ":" + port}
-	proxy := httputil.NewSingleHostReverseProxy(target)
-	proxy.Director = func(req *http.Request) {
-		req.URL.Scheme = target.Scheme
-		req.URL.Host = target.Host
-		req.URL.Path = rest
-		if req.URL.RawQuery == "" {
-			req.URL.RawQuery = r.URL.RawQuery
-		}
-		req.Host = target.Host
-		// サブパス認識用 (code-server / KasmVNC が生成するURLにプレフィックスを含める)
-		req.Header.Set("X-Forwarded-Prefix", "/proxy/"+app)
-	}
-	proxy.ServeHTTP(w, r)
+	w.Header().Set("X-Osgsuken-User", session.Username)
+	w.WriteHeader(http.StatusOK)
 }
 
 // ============================================================================

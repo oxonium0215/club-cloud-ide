@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# 開発機で Go ポータル (OIDC SSO + LXD + 2ボタン入口) を起動する
+# 開発機でポータル (OIDC SSO + LXD + Caddy プロキシ) を起動する
 # (本番は deploy/install.sh を使用)
 set -euo pipefail
 
@@ -8,6 +8,7 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 既存プロセスの掃除 (二重起動によるポート衝突を防ぐ)
 pkill -f "portal-bin" 2>/dev/null || true
+pkill -f "caddy run" 2>/dev/null || true
 sleep 1
 
 # LXD NAT 修復 (Docker が iptables FORWARD を DROP にする問題への対処)
@@ -26,10 +27,35 @@ if [ -n "$LXD_BRIDGE" ]; then
         sudo iptables -I FORWARD -i eth0 -o "$LXD_BRIDGE" -m state --state RELATED,ESTABLISHED -j ACCEPT
 fi
 
-# Go ポータルのビルド & 起動
+# Caddy の存在確認
+if ! command -v caddy >/dev/null 2>&1; then
+    echo "エラー: Caddy がインストールされていません。" >&2
+    echo "  https://caddyserver.com/docs/install を参照してインストールしてください。" >&2
+    exit 1
+fi
+
+# Caddy の設定検証
+caddy validate --config "$ROOT_DIR/deploy/Caddyfile" >/dev/null 2>&1 || {
+    echo "エラー: Caddyfile が不正です。" >&2
+    caddy validate --config "$ROOT_DIR/deploy/Caddyfile" >&2
+    exit 1
+}
+
+# Caddy を :7080 で起動 (ポータルのフロント)
+caddy run --config "$ROOT_DIR/deploy/Caddyfile" &
+CADDY_PID=$!
+
+# Go ポータルを :7081 で起動 (Caddy のバックエンド)
 cd "$ROOT_DIR/portal"
 go build -o portal-bin .
 
+export PORTAL_ADDR=":7081"
+export REDIRECT_URI="http://localhost:7080/auth/callback"
 export OIDC_CLIENT_SECRET="osgsuken-portal-secret"
 export REPO_URL="https://github.com/oxonium0215/club-cloud-ide.git"
-exec ./portal-bin
+./portal-bin &
+PORTAL_PID=$!
+
+# どちらかが終了したら両方止める
+wait -n "$CADDY_PID" "$PORTAL_PID"
+kill "$CADDY_PID" "$PORTAL_PID" 2>/dev/null || true

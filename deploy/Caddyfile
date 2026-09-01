@@ -1,0 +1,60 @@
+# Caddy 設定 (ポータルのリバースプロキシ)
+#
+# 構成:
+#   :7080 (Caddy) がすべての HTTP を受け、ポータル (Go) に認証を委譲する。
+#   /proxy/<app>/<ip>/* はコンテナ内サービスへ転送する。
+#
+# 動的コンテナ IP:
+#   LXD コンテナの IP は起動のたびに変わるため、ポータルの launch API が
+#   /proxy/<app>/<ip> 形式の URL を返し、Caddy がパスから IP を抽出して転送する。
+{
+	admin off
+	auto_https off
+}
+
+:7080 {
+	# --- 1. VS Code: /proxy/vscode/<ip>/* → <ip>:13337/* ---
+	@vscode {
+		path /proxy/vscode/*
+	}
+	handle @vscode {
+		forward_auth 127.0.0.1:7081 {
+			uri /auth/check
+		}
+		@vscode_upstream {
+			path_regexp vscode_upstream ^/proxy/vscode/([0-9.]+)(/.*)?$
+		}
+		handle @vscode_upstream {
+			uri strip_prefix /proxy/vscode/{re.vscode_upstream.1}
+			reverse_proxy {re.vscode_upstream.1}:13337 {
+				header_up X-Forwarded-Prefix /proxy/vscode
+			}
+		}
+		respond "container not ready" 502
+	}
+
+	# --- 2. デスクトップ: /proxy/desktop/<ip>/* → <ip>:6080/* ---
+	@desktop {
+		path /proxy/desktop/*
+	}
+	handle @desktop {
+		forward_auth 127.0.0.1:7081 {
+			uri /auth/check
+		}
+		@desktop_upstream {
+			path_regexp desktop_upstream ^/proxy/desktop/([0-9.]+)(/.*)?$
+		}
+		handle @desktop_upstream {
+			uri strip_prefix /proxy/desktop/{re.desktop_upstream.1}
+			reverse_proxy {re.desktop_upstream.1}:6080 {
+				header_up X-Forwarded-Prefix /proxy/desktop
+			}
+		}
+		respond "container not ready" 502
+	}
+
+	# --- 3. それ以外はポータル本体へ ---
+	handle {
+		reverse_proxy 127.0.0.1:7081
+	}
+}

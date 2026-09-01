@@ -1,11 +1,13 @@
 [Unit]
 Description=Club Cloud IDE Portal (OIDC SSO + LXD + 2-button entry)
-After=network-online.target
+After=network-online.target caddy.service
 Wants=network-online.target
 
 [Service]
 Type=simple
 WorkingDirectory=/opt/club-cloud-ide
+Environment=PORTAL_ADDR=:7081
+Environment=REDIRECT_URI=http://localhost:7080/auth/callback
 Environment=OIDC_CLIENT_SECRET=osgsuken-portal-secret
 Environment=REPO_URL=https://github.com/oxonium0215/club-cloud-ide.git
 ExecStart=/opt/club-cloud-ide/bin/osgsuken-portal
