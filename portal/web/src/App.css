@@ -2,8 +2,8 @@
   min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background: var(--kumo-bg-primary, #0f172a);
-  color: var(--kumo-text-primary, #f8fafc);
+  background: var(--kumo-bg-primary, #f8fafc);
+  color: var(--kumo-text-primary, #0f172a);
 }
 
 .center {
@@ -18,7 +18,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 16px 24px;
-  border-bottom: 1px solid var(--kumo-border-subtle, #1e293b);
+  border-bottom: 1px solid var(--kumo-border-subtle, #e2e8f0);
 }
 
 .brand {
@@ -37,15 +37,15 @@
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
-  color: var(--kumo-text-secondary, #94a3b8);
+  color: var(--kumo-text-secondary, #64748b);
   text-decoration: none;
   padding: 8px 14px;
   border-radius: 8px;
-  border: 1px solid var(--kumo-border-subtle, #334155);
+  border: 1px solid var(--kumo-border-subtle, #cbd5e1);
 }
 
 .logout:hover {
-  color: var(--kumo-text-primary, #f8fafc);
+  color: var(--kumo-text-primary, #0f172a);
 }
 
 .main {
@@ -65,7 +65,7 @@
 }
 
 .sub {
-  color: var(--kumo-text-secondary, #94a3b8);
+  color: var(--kumo-text-secondary, #64748b);
   font-size: 0.95rem;
   margin: 0;
 }
@@ -113,8 +113,8 @@
   align-items: center;
   justify-content: center;
   gap: 16px;
-  background: rgba(15, 23, 42, 0.92);
-  color: var(--kumo-text-primary, #f8fafc);
+  background: rgba(248, 250, 252, 0.92);
+  color: var(--kumo-text-primary, #0f172a);
 }
 
 .spinner {

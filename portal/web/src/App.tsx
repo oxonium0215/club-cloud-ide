@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Code, Desktop, SignOut } from "@phosphor-icons/react";
-import "@cloudflare/kumo/styles";
+import "./index.css";
 import "./App.css";
 
 const HEARTBEAT_MS = 30000;
@@ -100,9 +100,12 @@ function App() {
           <div className="login-box">
             <h1>数学研究部 クラウド演習室</h1>
             <p className="sub">iPad から使える開発環境</p>
-            <a href="/login">
-              <Button size="lg">学校アカウントでログイン</Button>
-            </a>
+            <Button
+              size="lg"
+              render={<a href="/login" />}
+            >
+              学校アカウントでログイン
+            </Button>
           </div>
         ) : (
           <>

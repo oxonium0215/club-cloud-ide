@@ -1,3 +1,9 @@
+@import "tailwindcss";
+@import "@cloudflare/kumo/styles/tailwind";
+
+/* kumo のコンポーネントが使う Tailwind クラスをスキャン対象に含める */
+@source "../node_modules/@cloudflare/kumo/dist";
+
 * {
   box-sizing: border-box;
 }
