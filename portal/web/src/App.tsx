@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
-import { Button, LinkButton } from "@cloudflare/kumo/components/button";
+import { LinkButton } from "@cloudflare/kumo/components/button";
 import { Surface } from "@cloudflare/kumo/components/surface";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { SignOut } from "@phosphor-icons/react";
+import vscodeLogo from "./assets/vscode.svg";
 import "./index.css";
 
 const HEARTBEAT_MS = 30000;
@@ -22,30 +23,11 @@ const statusLabels: Record<ContainerStatus, string> = {
   starting: "起動中",
 };
 
-function VSCodeIcon() {
+function MonitorIcon() {
   return (
-    <svg viewBox="0 0 32 32" className="h-14 w-14">
-      <path
-        fill="#007acc"
-        d="M23.2 1.4c-.6-.2-1.2-.1-1.7.2L3.1 13.5c-.6.4-.7 1.2-.3 1.8l1.7 2.2c.3.4.8.6 1.3.5l19.2-4.2c.6-.1 1.1-.6 1.1-1.2V3.2c0-.8-.6-1.5-1.3-1.7l-1.6-.1zm0 29.2c-.6.2-1.2.1-1.7-.2L3.1 18.5c-.6-.4-.7-1.2-.3-1.8l1.7-2.2c.3-.4.8-.6 1.3-.5l19.2 4.2c.6.1 1.1.6 1.1 1.2v8.6c0 .8-.6 1.5-1.3 1.7l-1.6.1z"
-      />
-      <path
-        fill="#fff"
-        d="M23.2 1.4c-.6-.2-1.2-.1-1.7.2L3.1 13.5c-.6.4-.7 1.2-.3 1.8l1.7 2.2c.3.4.8.6 1.3.5l19.2-4.2c.6-.1 1.1-.6 1.1-1.2V3.2c0-.8-.6-1.5-1.3-1.7l-1.6-.1zm0 29.2c-.6.2-1.2.1-1.7-.2L3.1 18.5c-.6-.4-.7-1.2-.3-1.8l1.7-2.2c.3-.4.8-.6 1.3-.5l19.2 4.2c.6.1 1.1.6 1.1 1.2v8.6c0 .8-.6 1.5-1.3 1.7l-1.6.1z"
-        transform="scale(0.5) translate(16 16)"
-      />
-    </svg>
-  );
-}
-
-function LXQtIcon() {
-  return (
-    <svg viewBox="0 0 32 32" className="h-14 w-14">
-      <path
-        fill="#17a2b8"
-        d="M27.7 7.1L17 4.4c-.3-.1-.7-.1-1 0L5.3 7.1c-.7.2-1.2.8-1.2 1.5v14.8c0 .7.5 1.3 1.2 1.5l10.7 2.7c.3.1.7.1 1 0l10.7-2.7c.7-.2 1.2-.8 1.2-1.5V8.6c0-.7-.5-1.3-1.2-1.5zM9.3 12.1l-3-1v-2l3 1v2zm5 1.2l-4-1.3V9.9l4 1.3v2.1zm5.2 1.5l-4.2-1.4V10.9l4.2 1.4v2.5zm-15.3-5.9l10-3.3 10 3.3-10 2.5-10-2.5zm0 8.6l10 2.5v2.1l-10-2.5v-2.1zm11 2.5l10-2.5v2.1l-10 2.5v-2.1z"
-        transform="scale(1.15) translate(-1 -1)"
-      />
+    <svg viewBox="0 0 24 24" className="h-14 w-14" fill="none" stroke="#0f172a" strokeWidth="1.5">
+      <rect x="2" y="3" width="20" height="14" rx="2" />
+      <path d="M8 21h8M12 17v4" strokeLinecap="round" />
     </svg>
   );
 }
@@ -138,18 +120,24 @@ function App() {
               コンテナ: {user ? statusLabels[user.container] : "..."}
             </p>
             <div className="flex flex-wrap justify-center gap-5">
-              <Surface className="flex flex-col items-center gap-3 p-8">
-                <VSCodeIcon />
-                <Button size="lg" variant="secondary" onClick={() => launch("vscode")}>
-                  VS Code
-                </Button>
+              <Surface
+                as="button"
+                color="secondary"
+                className="flex w-56 cursor-pointer flex-col items-center gap-3 p-8 text-center transition-transform hover:-translate-y-0.5"
+                onClick={() => launch("vscode")}
+              >
+                <img src={vscodeLogo} alt="VS Code" className="h-14 w-14" />
+                <span className="text-lg font-semibold">VS Code</span>
                 <span className="text-sm text-kumo-subtle">エディタで開発</span>
               </Surface>
-              <Surface className="flex flex-col items-center gap-3 p-8">
-                <LXQtIcon />
-                <Button size="lg" variant="secondary" onClick={() => launch("desktop")}>
-                  デスクトップ
-                </Button>
+              <Surface
+                as="button"
+                color="secondary"
+                className="flex w-56 cursor-pointer flex-col items-center gap-3 p-8 text-center transition-transform hover:-translate-y-0.5"
+                onClick={() => launch("desktop")}
+              >
+                <MonitorIcon />
+                <span className="text-lg font-semibold">デスクトップ</span>
                 <span className="text-sm text-kumo-subtle">LXQt デスクトップ</span>
               </Surface>
             </div>
