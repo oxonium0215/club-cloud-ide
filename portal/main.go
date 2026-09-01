@@ -67,6 +67,7 @@ type PortalServer struct {
 	lxd    *ContainerManager
 	oidc   *OIDCServer
 	client *PortalOIDCClient
+	jwt    *JWTManager
 	// sessions: ポータル独自セッション (token → PortalSession)
 	// ※ 本来は OIDC セッションと分離するが、簡略化のため
 	//    OIDC の access_token をポータルのセッションとして使う
@@ -155,12 +156,28 @@ func (p *PortalServer) handleRoot(w http.ResponseWriter, r *http.Request) {
 }
 
 // sessionFromRequest は Cookie のセッショントークンからセッションを取得する。
+// インメモリストアに無い場合は JWT (Access Token) を検証して再構築する。
+// これによりポータル再起動後も有効な Cookie があれば再ログイン不要になる。
 func (p *PortalServer) sessionFromRequest(r *http.Request) *PortalSession {
 	cookie, err := r.Cookie("osgsuken_session")
 	if err != nil {
 		return nil
 	}
-	return p.sessions.Get(cookie.Value)
+	if ps := p.sessions.Get(cookie.Value); ps != nil {
+		return ps
+	}
+	// ストアに無い → JWT を検証して復元を試みる
+	claims, err := p.jwt.ParseAccessToken(cookie.Value)
+	if err != nil || claims.PreferredUsername == "" {
+		return nil
+	}
+	ps := &PortalSession{
+		Token:    cookie.Value,
+		Username: claims.PreferredUsername,
+		Name:     claims.Name,
+	}
+	p.sessions.Set(ps.Token, ps)
+	return ps
 }
 
 // handleLoginRedirect は OIDC 認証を開始する。
@@ -298,6 +315,11 @@ func (p *PortalServer) handleAPILaunch(w http.ResponseWriter, r *http.Request) {
 	// ?folder= を最初から指定するとワークスペースが直接開く。
 	if app == "vscode" {
 		proxyURL += "/?folder=/home/osgsuken/workspace"
+	}
+	// デスクトップ (noVNC) は接続先をクエリで指定する。
+	// 自動接続させるため vnc.html に autoconnect=1 も付与する。
+	if app == "desktop" {
+		proxyURL += "/vnc.html?autoconnect=1&host=" + r.Host + "&path=/proxy/desktop/" + ip + "/websockify"
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
 		"proxy_url": proxyURL,
@@ -449,6 +471,7 @@ func main() {
 		lxd:      lxd,
 		oidc:     oidcServer,
 		client:   client,
+		jwt:      jwtMgr,
 		sessions: NewPortalSessionStore(),
 	}
 

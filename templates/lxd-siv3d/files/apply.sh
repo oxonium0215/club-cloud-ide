@@ -13,15 +13,12 @@ echo "[apply] 設定を配布中: ${CONFIG_DIR}"
 
 # 配布先ディレクトリの確保
 mkdir -p /home/osgsuken/.vnc \
-         /home/osgsuken/.config/kasmvnc \
          /home/osgsuken/.config/fcitx5 \
          /home/osgsuken/.config/code-server
 
 # 設定ファイルの配布
 install -m 0755 "${CONFIG_DIR}/xstartup"         /home/osgsuken/.vnc/xstartup
 install -m 0755 "${CONFIG_DIR}/entrypoint.sh"    /usr/local/bin/entrypoint.sh
-install -m 0644 "${CONFIG_DIR}/kasmvnc.yaml"     /home/osgsuken/.config/kasmvnc/kasmvnc.yaml
-install -m 0644 "${CONFIG_DIR}/kasmvnc.yaml"     /home/osgsuken/.vnc/kasmvnc.yaml
 install -m 0644 "${CONFIG_DIR}/fcitx5-profile"   /home/osgsuken/.config/fcitx5/profile
 install -m 0644 "${CONFIG_DIR}/fcitx5-config"    /home/osgsuken/.config/fcitx5/config
 install -m 0644 "${CONFIG_DIR}/code-server.yaml" /home/osgsuken/.config/code-server/config.yaml

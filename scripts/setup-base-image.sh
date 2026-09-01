@@ -1,21 +1,12 @@
 #!/usr/bin/env bash
 # ゴールデンベースイメージ作成スクリプト
 # イメージは「OS + 開発パッケージ」のみを焼き込み、
-# 実行時設定 (xstartup / kasmvnc.yaml / code-server 等) は
+# 実行時設定 (xstartup / noVNC / code-server 等) は
 # templates/lxd-siv3d/files/ から起動時に配布する (GitOps)。
 set -euo pipefail
 
 BASE_NAME="osgsuken-base"
 IMAGE_ALIAS="osgsuken-base-img"
-PACKAGE_DIR="/home/yugo/dev/club-cloud-ide/packages"
-KASMVNC_DEB="$PACKAGE_DIR/kasmvncserver_noble_1.5.0_amd64.deb"
-KASMVNC_URL="https://github.com/kasmtech/KasmVNC/releases/download/v1.5.0/kasmvncserver_noble_1.5.0_amd64.deb"
-
-# 0. KasmVNC deb の準備 (ローカルにあれば使い、なければダウンロード)
-if [ ! -f "$KASMVNC_DEB" ]; then
-    mkdir -p "$PACKAGE_DIR"
-    curl -fsSL -o "$KASMVNC_DEB" "$KASMVNC_URL"
-fi
 
 # 1. 既存ベースコンテナとイメージをクリーンアップ
 lxc delete "$BASE_NAME" --force 2>/dev/null || true
@@ -31,10 +22,7 @@ lxc launch ubuntu:24.04 "$BASE_NAME" \
     -c security.syscalls.intercept.mount=true
 sleep 3
 
-# 3. KasmVNC deb を転送
-lxc file push "$KASMVNC_DEB" "$BASE_NAME/tmp/kasmvncserver.deb"
-
-# 4. パッケージインストール
+# 3. パッケージインストール
 lxc exec "$BASE_NAME" -- bash -c '
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
@@ -126,12 +114,12 @@ apt_retry \
 export HOME=/root
 curl -fsSL https://code-server.dev/install.sh | sh
 
-# KasmVNC 本体 (依存不足で dpkg -i が失敗しても、apt-get install -f で解決する)
-dpkg -i /tmp/kasmvncserver.deb || true
-apt-get install -f -y
-rm -f /tmp/kasmvncserver.deb
+# VNC (TigerVNC サーバー + noVNC Web クライアント)
+# ※ KasmVNC はサブパス (サブディレクトリ) でのリバースプロキシに対応しておらず、
+#   noVNC は接続先を URL クエリで指定できるため、サブパス公開が容易。
+apt_retry tigervnc-standalone-server novnc websockify
 
-# snakeoil SSL 証明書 (KasmVNC 内部暗号化用)
+# snakeoil SSL 証明書 (websockify TLS 用)
 make-ssl-cert generate-default-snakeoil --force-overwrite
 chmod 0640 /etc/ssl/private/ssl-cert-snakeoil.key
 chown root:ssl-cert /etc/ssl/private/ssl-cert-snakeoil.key
@@ -142,20 +130,10 @@ useradd -m -s /bin/bash -G sudo,ssl-cert -u 1000 osgsuken
 echo "osgsuken ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/osgsuken
 chmod 0440 /etc/sudoers.d/osgsuken
 
-# KasmVNC パスワード (BasicAuth は -disableBasicAuth で無効化済みだが
-# ファイルの存在自体はチェックされるため作成する)
-mkdir -p /etc/kasmvnc /home/osgsuken/.vnc /home/osgsuken/.config/kasmvnc
-echo -e "suken123\nsuken123\n" | vncpasswd -u osgsuken -o /etc/kasmvnc/kasmpasswd
-chmod 0644 /etc/kasmvnc/kasmpasswd
-cp /etc/kasmvnc/kasmpasswd /home/osgsuken/.kasmpasswd
-cp /etc/kasmvnc/kasmpasswd /home/osgsuken/.vnc/kasmpasswd
-
-# KasmVNC の初回起動プロンプトを無効化する (entrypoint.sh が -fg なしで起動するため)
-# 1. デスクトップ環境選択プロンプト → .de-was-selected で回避
-# 2. ユーザー書き込みアクセス選択 → passwd DB を事前生成して回避
-touch /home/osgsuken/.vnc/.de-was-selected
-echo -e "suken123\nsuken123\n" | vncpasswd -u osgsuken -o /home/osgsuken/.vnc/passwd
-chown -R osgsuken:osgsuken /home/osgsuken/.vnc
+# VNC パスワード (VNC プロトコル認証用)
+mkdir -p /home/osgsuken/.vnc
+echo -e "suken123\nsuken123\n" | vncpasswd -f > /home/osgsuken/.vnc/passwd
+chmod 0600 /home/osgsuken/.vnc/passwd
 
 # 詳細設定は apply.sh が起動時に配布する。xstartup だけ空で置いておく
 # (vncserver は xstartup の存在を要求するため)
@@ -164,25 +142,7 @@ mkdir -p /home/osgsuken/workspace
 chown -R osgsuken:osgsuken /home/osgsuken
 '
 
-# 5. KasmVNC WebUI パッチ (自動ログイン & 安定画像レンダリング)
-#    画面描画モード (WebCodecs/WebGL) の互換性問題へのワークアラウンド
-cat > /tmp/kasmvnc-ui-patch.js << 'NODE_EOF'
-const fs = require("fs");
-const file = "/usr/share/kasmvnc/www/assets/ui-BOjwDkC7.js";
-if (fs.existsSync(file)) {
-    let code = fs.readFileSync(file, "utf8");
-    if (code.includes("credentials:{password:e}")) {
-        code = code.replace("credentials:{password:e}", "credentials:{username:hr(\"username\")||\"osgsuken\",password:e||hr(\"password\")||\"suken123\"}");
-    }
-    code = code.replace("o.initSetting(\"fallback_image_mode\",!1),o.initSetting(ht.STREAM_MODE,Ee.pseudoEncodingStreamingModeJpegWebp)", "o.forceSetting(\"fallback_image_mode\",!0,!1),o.forceSetting(ht.STREAM_MODE,Ee.pseudoEncodingStreamingModeJpegWebp,!1),o.forceSetting(\"video_rendering_mode\",\"canvas2d\",!1)");
-    fs.writeFileSync(file, code, "utf8");
-}
-NODE_EOF
-lxc file push /tmp/kasmvnc-ui-patch.js "$BASE_NAME/tmp/kasmvnc-ui-patch.js"
-lxc exec "$BASE_NAME" -- node /tmp/kasmvnc-ui-patch.js 2>/dev/null || true
-rm -f /tmp/kasmvnc-ui-patch.js
-
-# 6. コンテナ停止 & ゴールデンイメージの公開
+# 5. コンテナ停止 & ゴールデンイメージの公開
 lxc stop "$BASE_NAME"
 lxc publish "$BASE_NAME" --alias "$IMAGE_ALIAS"
 lxc delete "$BASE_NAME" --force 2>/dev/null || true

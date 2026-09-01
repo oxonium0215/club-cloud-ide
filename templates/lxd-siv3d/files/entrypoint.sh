@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ワークスペース起動時に呼ばれるエントリポイント。
-# (startup_script が apply.sh で設定配布済みなので、ここでは起動のみ)
+# (apply.sh が設定配布済みなので、ここでは起動のみ)
 set -e
 export HOME=/home/osgsuken
 export USER=osgsuken
@@ -21,13 +21,16 @@ chmod 0700 /run/user/1000
 #    --bind-addr 0.0.0.0: プロキシがコンテナIP経由でアクセスするため
 sudo -u osgsuken code-server /home/osgsuken/workspace &
 
-# 2. KasmVNC サーバー (ポート 6080) 起動
-#    -disableBasicAuth: KasmVNC WebUI の HTTP Basic 認証を無効化 (KasmVNC issue #259)
-#    -interface 0.0.0.0: ポータルのリバースプロキシがコンテナIP経由でアクセスするため
-#    -fg は使わない: 初回起動プロンプト (ユーザー選択) を回避する
-#    (プロンプトは .de-was-selected とユーザー設定をイメージに焼き込んで無効化。
-#     それでも出る場合は echo "3" で「書き込みユーザーなし」を選択して通過)
-echo "3" | sudo -u osgsuken vncserver :1 -geometry 1280x800 -depth 24 -websocketPort 6080 -sslOnly 0 -interface 0.0.0.0 -SecurityTypes None -videoCodec disabled -disableBasicAuth &
+# 2. TigerVNC サーバー (ポート 5901) 起動
+#    -localhost を付けず 0.0.0.0 でリッスン (websockify が同一コンテナ内から接続)
+#    -SecurityTypes VncAuth: パスワード認証 (~/.vnc/passwd)
+sudo -u osgsuken vncserver :1 -geometry 1280x800 -depth 24 -SecurityTypes VncAuth -localhost no &
+
+# 3. noVNC (websockify) をポート 6080 で起動
+#    --web: noVNC の静的ファイル (vnc.html 等) を配信
+#    --listen 6080: プロキシがコンテナIP経由でアクセスするため 0.0.0.0 で待受
+#    localhost:5901: TigerVNC へのブリッジ
+websockify --web /usr/share/novnc --listen 6080 --heartbeat 30 localhost:5901 &
 
 # 全プロセスの終了を待つ
 wait

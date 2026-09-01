@@ -1,7 +1,7 @@
 #!/bin/sh
-# KasmVNC デスクトップ起動スクリプト
+# VNC デスクトップ起動スクリプト
 # LXQt セッションを起動し、クラッシュ時は自動再起動する。
-# Xvnc のプロセスは xstartup が生きている限り維持される。
+# Xvnc (TigerVNC) のプロセスは xstartup が生きている限り維持される。
 export DESKTOP_SESSION=LXQt
 export XDG_CURRENT_DESKTOP=LXQt
 export XDG_SESSION_DESKTOP=LXQt

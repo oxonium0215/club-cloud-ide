@@ -10,6 +10,12 @@
 {
 	admin off
 	auto_https off
+	# デバッグ用アクセスログ (本番では off に)
+	log {
+		output stdout
+		format console
+		level INFO
+	}
 }
 
 :7080 {
@@ -34,23 +40,69 @@
 	}
 
 	# --- 2. デスクトップ: /proxy/desktop/<ip>/* → <ip>:6080/* ---
+	#    noVNC (websockify) はサブパスでの公開を前提とした作りで、
+	#    接続先を vnc.html?path=... で指定できる。Caddy はパスを維持して転送する。
 	@desktop {
 		path /proxy/desktop/*
 	}
 	handle @desktop {
-		forward_auth 127.0.0.1:7081 {
-			uri /auth/check
+		# WebSocket (/websockify) は Cookie 存在チェックのみ
+		@desktop_ws {
+			path /proxy/desktop/*/websockify
 		}
-		@desktop_upstream {
-			path_regexp desktop_upstream ^/proxy/desktop/([0-9.]+)(/.*)?$
+		@ws_no_cookie {
+			not header Cookie *osgsuken_session*
 		}
-		handle @desktop_upstream {
-			uri strip_prefix /proxy/desktop/{re.desktop_upstream.1}
-			reverse_proxy {re.desktop_upstream.1}:6080 {
-				header_up X-Forwarded-Prefix /proxy/desktop
+		handle @desktop_ws {
+			handle @ws_no_cookie {
+				respond "unauthorized" 401
+			}
+			@desktop_ws_upstream {
+				path_regexp desktop_ws_upstream ^/proxy/desktop/([0-9.]+)(/.*)?$
+			}
+			handle @desktop_ws_upstream {
+				uri strip_prefix /proxy/desktop/{re.desktop_ws_upstream.1}
+				reverse_proxy {re.desktop_ws_upstream.1}:6080
 			}
 		}
-		respond "container not ready" 502
+		# 静的アセット (vnc.html 読み込み後の CSS/JS) は認証チェック不要
+		@desktop_static {
+			path /proxy/desktop/*/vnc.html
+			path /proxy/desktop/*/vnc_lite.html
+			path /proxy/desktop/*/app/*
+			path /proxy/desktop/*/core/*
+			path /proxy/desktop/*/vendor/*
+			path /proxy/desktop/*/*.js
+			path /proxy/desktop/*/*.css
+			path /proxy/desktop/*/*.png
+			path /proxy/desktop/*/*.svg
+			path /proxy/desktop/*/*.woff*
+			path /proxy/desktop/*/*.html
+			path /proxy/desktop/*/favicon.ico
+		}
+		handle @desktop_static {
+			@desktop_static_upstream {
+				path_regexp desktop_static_upstream ^/proxy/desktop/([0-9.]+)(/.*)?$
+			}
+			handle @desktop_static_upstream {
+				uri strip_prefix /proxy/desktop/{re.desktop_static_upstream.1}
+				reverse_proxy {re.desktop_static_upstream.1}:6080
+			}
+		}
+		# その他 (ルートなど) は認証チェック
+		handle {
+			forward_auth 127.0.0.1:7081 {
+				uri /auth/check
+			}
+			@desktop_upstream {
+				path_regexp desktop_upstream ^/proxy/desktop/([0-9.]+)(/.*)?$
+			}
+			handle @desktop_upstream {
+				uri strip_prefix /proxy/desktop/{re.desktop_upstream.1}
+				reverse_proxy {re.desktop_upstream.1}:6080
+			}
+			respond "container not ready" 502
+		}
 	}
 
 	# --- 3. それ以外はポータル本体へ ---
