@@ -85,7 +85,29 @@ function App() {
         return;
       }
       setLoading("起動しました。アプリを開いています...");
-      window.location.href = data.proxy_url;
+
+      // コンテナ内サービス (code-server / noVNC) の起動を待つ。
+      // 起動直後は 502 になるため、readiness を確認してから遷移する。
+      const proxyUrl = data.proxy_url as string;
+      for (let i = 0; i < 30; i++) {
+        try {
+          const check = await fetch(proxyUrl, {
+            credentials: "same-origin",
+            method: "GET",
+            // noVNC は WebSocket で接続するため、HTML を確認するだけでは不十分。
+            // ここでは Caddy が 502 以外 (200/302) を返せば準備完了とみなす。
+          });
+          if (check.status !== 502) {
+            window.location.href = proxyUrl;
+            return;
+          }
+        } catch {
+          // ネットワークエラーも起動中とみなして再試行
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      // タイムアウト: それでも繋がらない場合は遷移 (再試行はブラウザ任せ)
+      window.location.href = proxyUrl;
     } catch {
       setLoading("接続エラー");
     }
