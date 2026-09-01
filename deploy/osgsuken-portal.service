@@ -1,14 +1,14 @@
 [Unit]
-Description=Club Cloud IDE Portal (2-button entry)
-After=osgsuken-coder.service
-Requires=osgsuken-coder.service
+Description=Club Cloud IDE Portal (OIDC SSO + LXD + 2-button entry)
+After=network-online.target
+Wants=network-online.target
 
 [Service]
 Type=simple
-User=yugo
-Environment=CODER_URL=http://localhost:7081
 WorkingDirectory=/opt/club-cloud-ide
-ExecStart=/usr/bin/env node scripts/portal.js
+Environment=OIDC_CLIENT_SECRET=osgsuken-portal-secret
+Environment=REPO_URL=https://github.com/oxonium0215/club-cloud-ide.git
+ExecStart=/opt/club-cloud-ide/bin/osgsuken-portal
 Restart=always
 RestartSec=3
 

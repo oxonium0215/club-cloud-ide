@@ -5,7 +5,7 @@
 ## 前提
 
 - LXD クラスタ構築済み (PC1 がリーダー、PC2 が参加)
-- Coder バイナリがインストール済み
+- Go 1.26 以上がインストール済み (ポータルのビルドに使用)
 - ゴールデンイメージ `osgsuken-base-img` が LXD に存在 (作成: `npm run build-image`)
 
 ## 導入
@@ -13,9 +13,6 @@
 各本番PCで:
 
 ```bash
-sudo mkdir -p /etc/coder
-sudo install -m 0600 /dev/null /etc/coder/env   # 秘密情報 (後述)
-
 git clone https://github.com/oxonium0215/club-cloud-ide.git /opt/club-cloud-ide
 cd /opt/club-cloud-ide
 sudo GITHUB_URL=https://github.com/oxonium0215/club-cloud-ide.git ./deploy/install.sh
@@ -26,38 +23,31 @@ sudo GITHUB_URL=https://github.com/oxonium0215/club-cloud-ide.git ./deploy/insta
 1. リポジトリを `/opt/club-cloud-ide` に配置
 2. `deploy/gitops-sync.sh` を `/usr/local/bin` に配置
 3. systemd timer `osgsuken-gitops.timer` を登録 (2分間隔で同期)
-4. Coder テンプレート `lxd-kde-siv3d` を push / create
+4. ゴールデンイメージの存在確認
+5. ポータル (Go) をビルドし、systemd サービス `osgsuken-portal.service` として登録
 
 ## 秘密情報の設定
 
-`/etc/coder/env` に環境変数として置く (Git には載せない):
+ポータルの systemd サービスに環境変数として注入する (Git には載せない):
 
 ```bash
-sudo tee -a /etc/coder/env <<'EOF'
-CODER_OIDC_CLIENT_SECRET=<学校のOIDCクライアントシークレット>
-EOF
+sudo systemctl edit osgsuken-portal.service
+# [Service] セクションに追加:
+# Environment=OIDC_CLIENT_SECRET=<学校のOIDCクライアントシークレット>
 ```
 
-Coder サービスはこのファイルを読み込むよう systemd 側で設定する (`EnvironmentFile=/etc/coder/env`)。
+本番では OIDC プロバイダを学校の実 SSO に切り替える。ポータルの起動パラメータで issuer を指定する:
 
-## 本番の coder.yaml
-
-`coder.yaml` の `oidc.issuerURL` を学校の実プロバイダに書き換える:
-
-```yaml
-oidc:
-  issuerURL: "https://accounts.google.com"   # 例: Google
-  clientID: "<クライアントID>"
-  emailDomain:
-    - "school.ed.jp"
-```
+- `OIDC_MOCK=false`
+- `OIDC_ISSUER=https://accounts.google.com` (例: Google)
+- `OIDC_CLIENT_ID=<クライアントID>`
 
 ## 設定変更の反映フロー
 
 ```
 開発機で push ──▶ GitHub ──▶ 本番PC (osgsuken-gitops.timer, 2分間隔)
-                                 ├─ templates/ 変更 → coder templates push
-                                 └─ ワークスペース再起動 → apply.sh が設定配布
+                                 ├─ portal/ 変更 → ポータル再ビルド & 再起動
+                                 └─ templates/ 変更 → コンテナ再作成時 apply.sh が設定配布
 ```
 
 ## トラブル時の手動同期

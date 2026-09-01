@@ -70,6 +70,7 @@ func (c *ContainerManager) Status(username string) (ContainerStatus, error) {
 
 // Create はコンテナを作成する (起動はしない)。
 // cloud-init (user-data) で起動時設定を注入する。
+// security.nesting / intercept はコンテナ内で snapd (firefox 等) を動かすために必要。
 func (c *ContainerManager) Create(username, userData string) error {
 	name := c.ContainerName(username)
 	req := api.InstancesPost{
@@ -80,9 +81,11 @@ func (c *ContainerManager) Create(username, userData string) error {
 		},
 		InstancePut: api.InstancePut{
 			Config: map[string]string{
-				"boot.autostart":   "false",
-				"security.nesting": "true",
-				"user.user-data":   userData,
+				"boot.autostart":                    "false",
+				"security.nesting":                  "true",
+				"security.syscalls.intercept.mknod": "true",
+				"security.syscalls.intercept.mount": "true",
+				"user.user-data":                    userData,
 			},
 		},
 		Type: "container",

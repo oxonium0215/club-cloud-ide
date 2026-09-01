@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # GitOps 同期スクリプト (本番PCで定期実行される)
-# リポジトリの更新を pull し、変更に応じて Coder テンプレートを反映する。
+# リポジトリの更新を pull する。コンテナ内の設定は起動時に pull されるため、
+# ここではリポジトリの更新のみ行う。
 # systemd timer (osgsuken-gitops.timer) から 2分間隔で呼ばれる。
 set -euo pipefail
 
@@ -23,16 +24,16 @@ if [ "$LOCAL_HASH" = "$REMOTE_HASH" ]; then
     exit 0
 fi
 
-CHANGED_FILES=$(git diff --name-only "$LOCAL_HASH" "$REMOTE_HASH")
-
+# 2. 最新コミットを取得
 git merge origin/main --ff-only
 
-# 2. Coder テンプレートの反映 (templates/ 変更時のみ)
-if echo "$CHANGED_FILES" | grep -q "^templates/"; then
-    if command -v coder >/dev/null 2>&1; then
-        cd "$REPO_DIR/templates/lxd-siv3d"
-        coder templates push lxd-kde-siv3d --yes
-    fi
+# 3. ポータル (Go) が更新されていれば再ビルド & 再起動
+CHANGED_FILES=$(git diff --name-only "$LOCAL_HASH" "$REMOTE_HASH")
+if echo "$CHANGED_FILES" | grep -q "^portal/"; then
+    cd "$REPO_DIR/portal"
+    go build -o portal-bin .
+    install -m 0755 portal-bin /opt/club-cloud-ide/bin/osgsuken-portal
+    systemctl restart osgsuken-portal.service 2>/dev/null || true
 fi
 
 echo "[GitOps] $(date +%FT%T) 同期完了: $REMOTE_HASH"

@@ -90,7 +90,7 @@ func renderPortalIndex(w http.ResponseWriter, loggedIn bool, username, name, con
     <div class="card" onclick="launch('desktop')">
         <div class="icon">&#128421;</div>
         <div class="label">デスクトップ</div>
-        <div class="desc">KDE Plasma デスクトップ</div>
+        <div class="desc">LXQt デスクトップ</div>
     </div>
 </div>
 <div id="loading">
@@ -158,13 +158,13 @@ setInterval(refreshStatus, 10000);
 // GitOps: 起動時にリポジトリから最新設定を pull し、サービスを起動する。
 const cloudInitData = `#cloud-config
 users:
-  - name: coder
+  - name: osgsuken
     sudo: ALL=(ALL) NOPASSWD:ALL
     shell: /bin/bash
 packages: []
 runcmd:
-  - [sh, -c, "if [ ! -d /home/coder/.config/club-cloud-ide/.git ]; then git clone --depth 1 --branch main REPO_URL_PLACEHOLDER /home/coder/.config/club-cloud-ide; else git -C /home/coder/.config/club-cloud-ide pull --ff-only; fi"]
-  - [sh, -c, "chown -R coder:coder /home/coder/.config/club-cloud-ide"]
-  - [bash, /home/coder/.config/club-cloud-ide/templates/lxd-siv3d/files/apply.sh]
+  - [sh, -c, "if [ ! -d /home/osgsuken/.config/club-cloud-ide/.git ]; then git clone --depth 1 --branch main REPO_URL_PLACEHOLDER /home/osgsuken/.config/club-cloud-ide; else git -C /home/osgsuken/.config/club-cloud-ide pull --ff-only; fi"]
+  - [sh, -c, "chown -R osgsuken:osgsuken /home/osgsuken/.config/club-cloud-ide"]
+  - [bash, /home/osgsuken/.config/club-cloud-ide/templates/lxd-siv3d/files/apply.sh]
   - [sh, -c, "setsid nohup /usr/local/bin/entrypoint.sh > /var/log/entrypoint.log 2>&1 < /dev/null &"]
 `

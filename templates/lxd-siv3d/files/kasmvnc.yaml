@@ -25,7 +25,7 @@ server:
       - Cross-Origin-Opener-Policy=same-origin
     httpd_directory: /usr/share/kasmvnc/www
   advanced:
-    kasm_password_file: /home/coder/.kasmpasswd
+    kasm_password_file: /home/osgsuken/.kasmpasswd
 
 command_line:
   prompt: false

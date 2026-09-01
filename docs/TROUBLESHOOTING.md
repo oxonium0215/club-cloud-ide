@@ -8,9 +8,9 @@
 
 ### 原因1: 間違ったベースイメージ
 
-`main.tf` が `image = "ubuntu:24.04"` (素のUbuntu) を指していると、KasmVNC も KDE Plasma も入らない。
+`osgsuken-base-img` ではなく素の Ubuntu が使われていると、KasmVNC も LXQt も入らない。
 
-- **対処:** `image = "osgsuken-base-img"` を参照する。作成は `npm run build-image`。
+- **対処:** `osgsuken-base-img` (LXQt + KasmVNC 入りゴールデンイメージ) を参照する。作成は `npm run build-image`。
 
 ### 原因2: LXD コンテナの外部通信断 (Docker との iptables 競合)
 
@@ -42,22 +42,21 @@ KasmVNC 1.5.0 デフォルトの動画エンコードが一部ブラウザで描
 
 ## タスクバーのアイコンを押すと VNC 接続が切れる
 
-タスクバーからアプリを起動すると KDE セッションがクラッシュし、Xvnc ごと終了して接続が切れる。以下の複合原因と対策:
+タスクバーからアプリを起動するとデスクトップセッションがクラッシュし、Xvnc ごと終了して接続が切れる。以下の複合原因と対策 (KDE 時代の教訓):
 
-- **原因1: 必須パッケージ欠落** — `--no-install-recommends` で `kinit` (klauncher) / `kio-extras` / `breeze` / `plasma-integration` / `xdg-utils` が入らない。
-  - **対処:** `setup-base-image.sh` に明示追加済み。
-- **原因2: `XDG_RUNTIME_DIR` 未設定** — KDE は `/run/user/1000` を必須とする。
+- **原因1: 必須パッケージ欠落** — `--no-install-recommends` で推奨パッケージ (アプリ起動に必須) が入らない。
+  - **対処:** `--no-install-recommends` を廃止し、LXQt に移行。
+- **原因2: `XDG_RUNTIME_DIR` 未設定** — デスクトップセッションは `/run/user/1000` を必須とする。
   - **対処:** `xstartup` / `entrypoint.sh` が自動作成する。
-- **原因3: `exec startplasma-x11`** — セッションが落ちると Xvnc ごと終了する構造。
+- **原因3: `exec` 起動** — セッションが落ちると Xvnc ごと終了する構造。
   - **対処:** `xstartup` を監視ループに変更し、セッションを自動再起動。
-- **原因4: LXD の `processes` 制限** — 250 では KDE (200プロセス前後) + アプリ起動で枯渇する。
-  - **対処:** `main.tf` で `processes = "1024"` に引き上げ。
+- **原因4: LXD の `processes` 制限** — 250 ではデスクトップ + アプリ起動で枯渇する。
+  - **対処:** `processes = "1024"` に引き上げ。
 
 ### 既存コンテナへの応急処置
 
 ```bash
 # コンテナ内
-sudo apt-get install -y --no-install-recommends breeze kinit kio-extras xdg-utils plasma-integration
-sudo mkdir -p /run/user/1000 && sudo chown coder:coder /run/user/1000 && sudo chmod 0700 /run/user/1000
-# /home/coder/.vnc/xstartup を新バージョンに差し替え、vncserver を再起動
+sudo mkdir -p /run/user/1000 && sudo chown osgsuken:osgsuken /run/user/1000 && sudo chmod 0700 /run/user/1000
+# /home/osgsuken/.vnc/xstartup を新バージョンに差し替え、vncserver を再起動
 ```
