@@ -31,6 +31,11 @@ fcitx5 -d 2>/dev/null || true
 # 仮想オーディオ (PulseAudio)
 pulseaudio --start --exit-idle-time=-1 2>/dev/null || true
 
+# スクリーンセーバー無効化 (VNC で画面がブランクになるのを防ぐ)
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+xset s noblank 2>/dev/null || true
+
 # LXQt セッション起動
 startlxqt &
 
@@ -38,6 +43,10 @@ startlxqt &
 # exec startlxqt にすると、セッションが一度でも落ちると
 # Xvnc ごと終了して VNC 接続が切れてしまう。
 while true; do
+    # LXQt が xscreensaver を自動起動するため、起動後に無効化する
+    xset s off 2>/dev/null || true
+    xset s noblank 2>/dev/null || true
+    pkill -f xscreensaver 2>/dev/null || true
     wait
     echo "[xstartup] LXQt セッションが終了しました。3秒後に再起動します..."
     sleep 3

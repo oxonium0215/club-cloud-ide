@@ -119,6 +119,10 @@ curl -fsSL https://code-server.dev/install.sh | sh
 #   noVNC は接続先を URL クエリで指定できるため、サブパス公開が容易。
 apt_retry tigervnc-standalone-server novnc websockify
 
+# スクリーンセーバーを削除 (VNC で画面がブランクになるのを防ぐ)
+# LXQt は xscreensaver を自動起動するため、アンインストールが確実
+apt-get remove -y xscreensaver xscreensaver-data xscreensaver-gl 2>/dev/null || true
+
 # snakeoil SSL 証明書 (websockify TLS 用)
 make-ssl-cert generate-default-snakeoil --force-overwrite
 chmod 0640 /etc/ssl/private/ssl-cert-snakeoil.key

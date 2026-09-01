@@ -23,7 +23,8 @@ install -m 0755 "${CONFIG_DIR}/entrypoint.sh"    /usr/local/bin/entrypoint.sh
 install -m 0644 "${CONFIG_DIR}/fcitx5-profile"   /home/osgsuken/.config/fcitx5/profile
 install -m 0644 "${CONFIG_DIR}/fcitx5-config"    /home/osgsuken/.config/fcitx5/config
 install -m 0644 "${CONFIG_DIR}/code-server.yaml" /home/osgsuken/.config/code-server/config.yaml
-install -m 0644 "${CONFIG_DIR}/lxqt.conf"        /home/osgsuken/.config/lxqt/lxqt.conf
+install -m 0644 "${CONFIG_DIR}/lxqt.conf"                /home/osgsuken/.config/lxqt/lxqt.conf
+install -m 0644 "${CONFIG_DIR}/lxqt-powermanagement.conf" /home/osgsuken/.config/lxqt/lxqt-powermanagement.conf
 
 # systemd サービス (code-server + TigerVNC + noVNC を自動起動)
 # runcmd で直接起動すると cloud-init が完了しないため、systemd で管理する
