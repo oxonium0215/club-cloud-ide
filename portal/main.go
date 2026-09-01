@@ -14,6 +14,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -130,7 +131,8 @@ func (s *PortalSessionStore) All() []*PortalSession {
 
 // RegisterRoutes はポータルのルーティングを登録する。
 func (p *PortalServer) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/", p.handleRoot)
+	// 静的フロントエンド (React + kumo のビルド成果物 dist/)
+	mux.Handle("/", p.frontendHandler())
 	mux.HandleFunc("/login", p.handleLoginRedirect)
 	mux.HandleFunc("/auth/callback", p.handleAuthCallback)
 	mux.HandleFunc("/logout", p.handleLogout)
@@ -141,19 +143,26 @@ func (p *PortalServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("/auth/check", p.handleAuthCheck)
 }
 
-// handleRoot はポータル画面を返す。
-func (p *PortalServer) handleRoot(w http.ResponseWriter, r *http.Request) {
-	// /proxy/ 以外は SPA 的にポータル HTML を返す
-	if r.URL.Path != "/" {
-		http.NotFound(w, r)
-		return
+// frontendHandler は React ビルド成果物 (dist/) を配信する。
+// SPA なので、存在しないパスは index.html を返す。
+func (p *PortalServer) frontendHandler() http.Handler {
+	distFS, err := fs.Sub(frontendDist, "dist")
+	if err != nil {
+		panic(fmt.Sprintf("failed to embed frontend dist: %v", err))
 	}
-	session := p.sessionFromRequest(r)
-	if session == nil {
-		renderPortalIndex(w, false, "", "", "")
-		return
-	}
-	renderPortalIndex(w, true, session.Username, session.Name, "")
+	fileServer := http.FileServer(http.FS(distFS))
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// API パスは frontend に渡さない (RegisterRoutes で先にマッチする)
+		path := strings.TrimPrefix(r.URL.Path, "/")
+		if path == "" {
+			path = "index.html"
+		}
+		if _, err := fs.Stat(distFS, path); err != nil {
+			// SPA フォールバック
+			r.URL.Path = "/"
+		}
+		fileServer.ServeHTTP(w, r)
+	})
 }
 
 // sessionFromRequest は Cookie のセッショントークンからセッションを取得する。

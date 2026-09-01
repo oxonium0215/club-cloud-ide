@@ -25,6 +25,11 @@ packages/*.deb
 portal/portal
 portal/portal-bin
 
+# フロントエンド (React + kumo) ビルド成果物
+portal/dist/
+portal/web/dist/
+portal/web/node_modules/
+
 # Terraform ローカルファイル
 templates/*/.terraform/
 templates/*/.terraform.lock.hcl

@@ -47,6 +47,15 @@ CADDY_PID=$!
 
 # Go ポータルを :7081 で起動 (Caddy のバックエンド)
 cd "$ROOT_DIR/portal"
+
+# フロントエンド (React + kumo) をビルドして dist/ に配置 (go:embed 用)
+if [ -d web ]; then
+    echo "フロントエンドをビルド中..."
+    (cd web && NODE_ENV=development npm run build)
+    rm -rf dist
+    cp -r web/dist dist
+fi
+
 go build -o portal-bin .
 
 export PORTAL_ADDR=":7081"
