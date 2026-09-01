@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -317,9 +318,14 @@ func (p *PortalServer) handleAPILaunch(w http.ResponseWriter, r *http.Request) {
 		proxyURL += "/?folder=/home/osgsuken/workspace"
 	}
 	// デスクトップ (noVNC) は接続先をクエリで指定する。
-	// 自動接続させるため vnc.html に autoconnect=1 も付与する。
+	// host はポートを含めない (noVNC が自動でポートを付与するため 2重になる)。
+	// port を明示して、ws://<host>:<port>/... を生成させる。
 	if app == "desktop" {
-		proxyURL += "/vnc.html?autoconnect=1&host=" + r.Host + "&path=/proxy/desktop/" + ip + "/websockify"
+		host := r.Host
+		if h, _, err := net.SplitHostPort(r.Host); err == nil {
+			host = h
+		}
+		proxyURL += "/vnc.html?autoconnect=1&host=" + host + "&port=7080&path=/proxy/desktop/" + ip + "/websockify"
 	}
 	writeJSON(w, http.StatusOK, map[string]string{
 		"proxy_url": proxyURL,
