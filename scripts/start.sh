@@ -41,11 +41,8 @@ caddy validate --config "$ROOT_DIR/deploy/Caddyfile" >/dev/null 2>&1 || {
     exit 1
 }
 
-# Caddy を :7080 で起動 (ポータルのフロント)
-caddy run --config "$ROOT_DIR/deploy/Caddyfile" &
-CADDY_PID=$!
-
-# Go ポータルを :7081 で起動 (Caddy のバックエンド)
+# Go ポータルのビルド (フロントエンド込み)
+# ※ ビルド中は Caddy を起動しない (起動中に 502 が返るのを防ぐ)
 cd "$ROOT_DIR/portal"
 
 # フロントエンド (React + kumo) をビルドして dist/ に配置 (go:embed 用)
@@ -58,6 +55,11 @@ fi
 
 go build -o portal-bin .
 
+# Caddy を :7080 で起動 (ポータルのフロント)
+caddy run --config "$ROOT_DIR/deploy/Caddyfile" &
+CADDY_PID=$!
+
+# Go ポータルを :7081 で起動 (Caddy のバックエンド)
 export PORTAL_ADDR=":7081"
 export REDIRECT_URI="http://localhost:7080/auth/callback"
 export OIDC_CLIENT_SECRET="osgsuken-portal-secret"

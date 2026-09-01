@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, LinkButton } from "@cloudflare/kumo/components/button";
 import { Code, Desktop, SignOut } from "@phosphor-icons/react";
 import "./index.css";
 import "./App.css";
@@ -100,12 +100,9 @@ function App() {
           <div className="login-box">
             <h1>数学研究部 クラウド演習室</h1>
             <p className="sub">iPad から使える開発環境</p>
-            <Button
-              size="lg"
-              render={<a href="/login" />}
-            >
+            <LinkButton href="/login" size="lg">
               学校アカウントでログイン
-            </Button>
+            </LinkButton>
           </div>
         ) : (
           <>
