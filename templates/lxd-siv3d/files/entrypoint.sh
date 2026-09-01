@@ -23,8 +23,10 @@ sudo -u osgsuken code-server /home/osgsuken/workspace &
 
 # 2. TigerVNC サーバー (ポート 5901) 起動
 #    -localhost を付けず 0.0.0.0 でリッスン (websockify が同一コンテナ内から接続)
-#    -SecurityTypes VncAuth: パスワード認証 (~/.vnc/passwd)
-sudo -u osgsuken vncserver :1 -geometry 1280x800 -depth 24 -SecurityTypes VncAuth -localhost no &
+#    -SecurityTypes None: パスワード認証を無効化 (ポータルの SSO 認証のみで完結。
+#      二重認証を避けるため。コンテナへの到達は Caddy の forward_auth で制限済み)
+#    --I-KNOW-THIS-IS-INSECURE: 認証なしの 0.0.0.0 公開を TigerVNC が拒否するため
+sudo -u osgsuken vncserver :1 -geometry 1280x800 -depth 24 -SecurityTypes None --I-KNOW-THIS-IS-INSECURE -localhost no &
 
 # 3. noVNC (websockify) をポート 6080 で起動
 #    --web: noVNC の静的ファイル (vnc.html 等) を配信
