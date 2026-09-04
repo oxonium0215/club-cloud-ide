@@ -7,6 +7,14 @@ set -euo pipefail
 REPO_DIR="/opt/club-cloud-ide"
 GITHUB_URL="${GITHUB_URL:?GITHUB_URL を設定してください (例: https://github.com/oxonium0215/club-cloud-ide.git)}"
 
+# 前提ツールの確認
+for cmd in git go node npm lxc; do
+    if ! command -v "$cmd" >/dev/null 2>&1; then
+        echo "エラー: $cmd がインストールされていません。" >&2
+        exit 1
+    fi
+done
+
 # 1. リポジトリ配置 (GitOps の同期元)
 mkdir -p /opt
 if [ ! -d "$REPO_DIR/.git" ]; then
@@ -45,6 +53,15 @@ fi
 
 # 6. ポータル (Go) のビルド & systemd サービス登録
 cd "$REPO_DIR/portal"
+
+# フロントエンド (React + kumo) をビルドして dist/ に配置 (go:embed 用)
+if [ -d web ]; then
+    echo "フロントエンドをビルド中..."
+    (cd web && NODE_ENV=development npm install && NODE_ENV=development npm run build)
+    rm -rf dist
+    cp -r web/dist dist
+fi
+
 go build -o portal-bin .
 
 install -d /opt/club-cloud-ide/bin

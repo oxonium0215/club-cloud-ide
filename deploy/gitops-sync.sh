@@ -31,6 +31,12 @@ git merge origin/main --ff-only
 CHANGED_FILES=$(git diff --name-only "$LOCAL_HASH" "$REMOTE_HASH")
 if echo "$CHANGED_FILES" | grep -q "^portal/"; then
     cd "$REPO_DIR/portal"
+    # フロントエンド (React + kumo) の変更も含むため、常にビルドして dist/ を更新
+    if [ -d web ]; then
+        (cd web && NODE_ENV=development npm install && NODE_ENV=development npm run build) 2>/dev/null || true
+        rm -rf dist
+        cp -r web/dist dist
+    fi
     go build -o portal-bin .
     install -m 0755 portal-bin /opt/club-cloud-ide/bin/osgsuken-portal
     systemctl restart osgsuken-portal.service 2>/dev/null || true
