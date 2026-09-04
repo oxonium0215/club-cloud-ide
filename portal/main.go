@@ -41,6 +41,11 @@ type Config struct {
 	LXDImage        string
 	RepoURL         string // 設定配布元 Git リポジトリ (GitOps)
 	ContainerLimits map[string]string
+	// Discord OAuth2 連携 (任意)
+	DiscordClientID     string
+	DiscordClientSecret string
+	DiscordRedirectURI  string // http://.../auth/discord/callback
+	DiscordGuildID      string // 部員が所属する Discord サーバー ID
 }
 
 func defaultConfig() *Config {
@@ -65,11 +70,12 @@ func defaultConfig() *Config {
 
 // PortalServer は部員向けポータル (2ボタンUI + プロキシ + セッション)。
 type PortalServer struct {
-	cfg    *Config
-	lxd    *ContainerManager
-	oidc   *OIDCServer
-	client *PortalOIDCClient
-	jwt    *JWTManager
+	cfg     *Config
+	lxd     *ContainerManager
+	oidc    *OIDCServer
+	client  *PortalOIDCClient
+	jwt     *JWTManager
+	discord *DiscordOAuthClient
 	// sessions: ポータル独自セッション (token → PortalSession)
 	// ※ 本来は OIDC セッションと分離するが、簡略化のため
 	//    OIDC の access_token をポータルのセッションとして使う
@@ -135,7 +141,11 @@ func (p *PortalServer) RegisterRoutes(mux *http.ServeMux) {
 	mux.Handle("/", p.frontendHandler())
 	mux.HandleFunc("/login", p.handleLoginRedirect)
 	mux.HandleFunc("/auth/callback", p.handleAuthCallback)
+	// Discord OAuth2 ログイン (任意)
+	mux.HandleFunc("/login/discord", p.handleDiscordLoginRedirect)
+	mux.HandleFunc("/auth/discord/callback", p.handleDiscordCallback)
 	mux.HandleFunc("/logout", p.handleLogout)
+	mux.HandleFunc("/api/config", p.handleAPIConfig)
 	mux.HandleFunc("/api/me", p.handleAPIme)
 	mux.HandleFunc("/api/launch", p.handleAPILaunch)
 	mux.HandleFunc("/api/heartbeat", p.handleAPIHeartbeat)
@@ -245,6 +255,13 @@ func (p *PortalServer) handleLogout(w http.ResponseWriter, r *http.Request) {
 		Name: "osgsuken_session", Value: "", Path: "/", HttpOnly: true, MaxAge: -1,
 	})
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// handleAPIConfig はログイン画面の表示に必要な公開設定を返す (認証不要)。
+func (p *PortalServer) handleAPIConfig(w http.ResponseWriter, r *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"discord_enabled": p.discord != nil && p.discord.Enabled(),
+	})
 }
 
 // handleAPIme はログイン中のユーザー情報とコンテナ状態を返す。
@@ -441,6 +458,19 @@ func main() {
 			cfg.IdleTimeout = d
 		}
 	}
+	// Discord OAuth2 連携 (任意)
+	if v := os.Getenv("DISCORD_CLIENT_ID"); v != "" {
+		cfg.DiscordClientID = v
+	}
+	if v := os.Getenv("DISCORD_CLIENT_SECRET"); v != "" {
+		cfg.DiscordClientSecret = v
+	}
+	if v := os.Getenv("DISCORD_REDIRECT_URI"); v != "" {
+		cfg.DiscordRedirectURI = v
+	}
+	if v := os.Getenv("DISCORD_GUILD_ID"); v != "" {
+		cfg.DiscordGuildID = v
+	}
 
 	// LXD 接続
 	lxd, err := NewContainerManager("/var/snap/lxd/common/lxd/unix.socket", cfg.LXDImage)
@@ -481,6 +511,18 @@ func main() {
 		log.Fatalf("failed to init OIDC client: %v", err)
 	}
 
+	// Discord OAuth2 クライアント (設定されていれば有効)
+	discordClient := NewDiscordOAuthClient(&DiscordConfig{
+		Enabled:      cfg.DiscordClientID != "" && cfg.DiscordClientSecret != "" && cfg.DiscordGuildID != "",
+		ClientID:     cfg.DiscordClientID,
+		ClientSecret: cfg.DiscordClientSecret,
+		RedirectURI:  cfg.DiscordRedirectURI,
+		GuildID:      cfg.DiscordGuildID,
+	})
+	if discordClient.Enabled() {
+		log.Printf("[discord] OAuth2 ログイン有効 (guild: %s)", cfg.DiscordGuildID)
+	}
+
 	// ポータル
 	portal := &PortalServer{
 		cfg:      cfg,
@@ -488,6 +530,7 @@ func main() {
 		oidc:     oidcServer,
 		client:   client,
 		jwt:      jwtMgr,
+		discord:  discordClient,
 		sessions: NewPortalSessionStore(),
 	}
 

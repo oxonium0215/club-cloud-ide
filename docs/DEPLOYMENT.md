@@ -75,6 +75,53 @@ sudo systemctl edit osgsuken-portal.service
 
 `REDIRECT_URI` は deploy/osgsuken-portal.service のデフォルト (http://localhost:7080/auth/callback) を上書きする。
 
+## Discord 認証 (OAuth2 + Guild ID 判定)
+
+学校 SSO の代わりに (または併用して) **Discord ログイン**を有効にできる。Discord は OIDC 非対応のため、ポータルが OAuth2 を直接処理し、**部員が指定 Discord サーバー (Guild) のメンバーであること**を判定して認証する。
+
+### 1. Discord Developer Portal でアプリを作成
+
+1. https://discord.com/developers/applications で **New Application** (例: 数学研究部クラウド)
+2. **OAuth2 → General** で以下を設定:
+   - Redirects: `http://osgsuken.local:7080/auth/discord/callback`
+   - Default Authorization Link: カスタム
+3. **OAuth2 → URL Generator** で必要なスコープを確認:
+   - `identify` (ユーザー名・アバター取得)
+   - `guilds` (所属サーバー判定)
+   - Authorization Method: **In-app authorization (Client Secret)**
+4. **Client ID / Client Secret** を控える
+5. 部員 Discord サーバーの **Guild ID** を控える (サーバー設定 → ウィジェット → サーバーID)
+
+### 2. ポータルの systemd サービスに環境変数を追加
+
+```bash
+sudo systemctl edit osgsuken-portal.service
+# [Service] セクションに追加:
+# Environment=DISCORD_CLIENT_ID=<Client ID>
+# Environment=DISCORD_CLIENT_SECRET=<Client Secret>
+# Environment=DISCORD_REDIRECT_URI=http://osgsuken.local:7080/auth/discord/callback
+# Environment=DISCORD_GUILD_ID=<部員DiscordサーバーのGuild ID>
+```
+
+設定後:
+
+```bash
+sudo systemctl restart osgsuken-portal.service
+```
+
+### 3. 動作
+
+- ログイン画面に「Discordでログイン」ボタンが表示される
+- Discord の認可画面でログイン → ポータルが **Guild ID のメンバー判定**を実行
+- メンバーならセッション確立 (コンテナ名は Discord の username から生成)
+- **メンバーでなければ「部活動の Discord サーバーに参加していないため利用できません」と拒否**
+
+### 注意
+
+- `DISCORD_GUILD_ID` が未設定の場合は Discord ログインは無効 (ボタン非表示)
+- Discord ログインで作成されるコンテナは、ユーザー名が Discord の username に基づく
+- 学校 SSO (OIDC) と Discord は併用可能。両方設定すると両方のログインボタンが表示される
+
 ## 設定変更の反映フロー
 
 ```
